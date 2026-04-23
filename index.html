@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>지구 과학 탐험: 30초 서바이벌 EX+ Pro</title>
+    <title>지구 과학 탐험: 30초 서바이벌 EX+ FINAL (Dev Mode)</title>
     <style>
         :root {
             --primary: #4caf50;
@@ -30,7 +30,7 @@
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
             max-width: 100%; max-height: 100%;
         }
-        /* UI 레이어 */
+        /* UI Layer */
         #ui-layer {
             position: absolute; top: 20px; left: 50%;
             transform: translateX(-50%);
@@ -57,7 +57,7 @@
         .exp-row { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
         #exp-bar-inner { width: 0%; height: 100%; background: var(--sky); transition: width 0.3s; }
 
-        /* 보스 체력 UI */
+        /* Boss HP UI */
         #boss-ui {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             width: 85%; display: none; flex-direction: column; align-items: center;
@@ -65,7 +65,7 @@
         #boss-hp-outer { width: 100%; height: 24px; background: #222; border: 2px solid #ff4757; border-radius: 12px; overflow: hidden; box-shadow: 0 0 15px rgba(255, 71, 87, 0.5); }
         #boss-hp-inner { width: 100%; height: 100%; background: linear-gradient(90deg, #ff4757, #ff6b81); transition: width 0.1s; }
 
-        /* 모달 스타일 */
+        /* Modal Styles */
         #modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 85%; max-width: 420px;
@@ -83,12 +83,14 @@
         .option-btn:hover { border-color: var(--primary); background: #333; }
         .option-btn:active { transform: scale(0.95); background: var(--primary); }
 
-        /* 화면 오버레이 */
-        #start-screen, #clear-screen, #fail-screen {
+        /* Overlays */
+        #start-screen, #clear-screen, #fail-screen, #dev-screen {
             position: absolute; inset: 0; background: rgba(0,0,0,0.95);
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200;
         }
-        #fail-screen { display: none; }
+        #fail-screen, #dev-screen { display: none; }
+        #dev-screen { z-index: 300; } /* 개발자 화면은 가장 위에 */
+        
         .play-btn {
             padding: 22px 60px; font-size: 26px; background: var(--primary);
             border: none; border-radius: 50px; color: white; cursor: pointer;
@@ -98,7 +100,7 @@
         .play-btn.retry-btn { background: #e67e22; }
         .play-btn:hover { transform: scale(1.05); }
 
-        /* 조이스틱 */
+        /* Joystick */
         #joystick-container {
             position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
             width: 140px; height: 140px;
@@ -129,7 +131,7 @@
     </div>
 
     <div id="boss-ui">
-        <div id="boss-name" style="margin-bottom: 5px; font-weight: bold; color: #ff4757; text-shadow: 0 0 5px #000;">보스 이름</div>
+        <div id="boss-name" style="margin-bottom: 5px; font-weight: bold; color: #ff4757; text-shadow: 0 0 5px #000;">보스</div>
         <div id="boss-hp-outer"><div id="boss-hp-inner"></div></div>
     </div>
 
@@ -139,33 +141,52 @@
         <div id="modal-options"></div>
     </div>
 
-    <!-- 실패 화면 -->
     <div id="fail-screen">
         <h1 style="font-size: 48px; color: var(--danger); margin-bottom: 10px;">방어 실패!</h1>
         <p id="fail-msg" style="color: #ccc; margin-bottom: 30px;">지구가 위험에 처했습니다.</p>
         <div id="fail-buttons" style="display: flex; flex-direction: column; gap: 10px;">
-            <button id="boss-retry-btn" class="play-btn retry-btn" style="display: none;" onclick="retryBoss()">보스전 재도전</button>
+            <button id="boss-retry-btn" class="play-btn retry-btn" onclick="startRetryQuiz()">부활 퀴즈 도전</button>
             <button class="play-btn" onclick="location.reload()">처음부터 다시 시작</button>
         </div>
     </div>
 
-    <!-- 스테이지 클리어 화면 -->
     <div id="clear-screen" style="display: none;">
         <h1 style="font-size: 48px; color: var(--primary); margin-bottom: 10px;">STAGE CLEAR!</h1>
         <p id="clear-status-msg" style="color: #ccc; margin-bottom: 5px;">방어 성공!</p>
         <p id="clear-heal-msg" style="color: var(--accent); margin-bottom: 30px; font-weight:bold;"></p>
-        <button class="play-btn" onclick="goToNextStage()">다음 지역으로 진입</button>
+        <button class="play-btn" onclick="goToNextStage()">다음 지역 진입</button>
     </div>
 
-    <div id="joystick-container">
-        <div id="joystick-stick"></div>
+    <!-- 개발자 모드 화면 -->
+    <div id="dev-screen">
+        <h2 style="color: var(--accent); font-size: 36px; margin-bottom: 20px;">🛠 개발자 모드 (테스트용)</h2>
+        <div style="margin: 10px 0;">
+            <label style="font-size: 20px;">이동할 스테이지 (1~20): </label>
+            <input type="number" id="dev-stage" value="11" min="1" max="20" style="width: 70px; font-size: 20px; text-align: center; background: #333; color: #fff; border: 2px solid var(--primary); border-radius: 8px; padding: 5px;">
+        </div>
+        <div style="margin: 10px 0;">
+            <label style="font-size: 20px;">플레이어 레벨 (1~50): </label>
+            <input type="number" id="dev-lv" value="15" min="1" max="50" style="width: 70px; font-size: 20px; text-align: center; background: #333; color: #fff; border: 2px solid var(--primary); border-radius: 8px; padding: 5px;">
+        </div>
+        <p style="color: #aaa; font-size: 15px; margin-bottom: 40px; max-width: 80%; text-align: center;">
+            ※ 입력한 레벨에 비례하여 <b>체력, 공격력, 다중 사격</b> 등이 자동 보정되어 생존이 가능하도록 세팅됩니다.<br>
+            (단축키: 숫자 1 왼쪽의 ` 백틱 키)
+        </p>
+        <div style="display: flex; gap: 15px;">
+            <button class="play-btn" style="padding: 15px 30px; font-size: 20px;" onclick="startDevGame()">해당 설정으로 시작</button>
+            <button class="play-btn" style="padding: 15px 30px; font-size: 20px; background: #555;" onclick="closeDevMenu()">닫기</button>
+        </div>
     </div>
+
+    <div id="joystick-container"><div id="joystick-stick"></div></div>
 
     <div id="start-screen">
         <div style="font-size: 60px; margin-bottom: 20px;">🌍</div>
         <h1 style="font-size: 44px; margin-bottom: 5px; text-align: center;">지구 과학<br>서바이벌 EX+</h1>
-        <p style="color: #888; margin-bottom: 40px; text-align: center;">워크북 내용으로 무장하고<br>지구의 심장부를 수호하세요!</p>
-        <button class="play-btn" onclick="startGame()">탐험 시작</button>
+        <button class="play-btn" onclick="startGame(1, 1)">탐험 시작</button>
+        
+        <!-- 개발자 모드 진입 버튼 (숨겨진 느낌으로) -->
+        <div style="position: absolute; bottom: 20px; right: 20px; font-size: 30px; cursor: pointer; opacity: 0.3;" onclick="openDevMenu()" title="개발자 모드">⚙️</div>
     </div>
 </div>
 
@@ -181,56 +202,58 @@
     }
     window.addEventListener('resize', resize); resize();
 
-    // PPT 완벽 반영 퀴즈 뱅크 (50개) - 중복/교육외 삭제 완료
+    // PPT 내용 기반 퀴즈 (셰일->이암 반영)
     const quizBank = [
         { q: "지구를 구성하는 요소들이 모여 상호작용하며 생성된 계는?", a: ["지구계", "태양계", "생태계", "우주계"], c: 0 },
-        { q: "지구계 구성 요소 중 지표와 지구 내부 영역을 포함하는 것은?", a: ["지권", "기권", "수권", "외권"], c: 0 },
-        { q: "지구계 구성 요소 중 바다, 강, 빙하 등이 속한 영역은?", a: ["수권", "지권", "기권", "생물권"], c: 0 },
-        { q: "지구계 구성 요소 중 질소, 산소 등으로 이루어진 공기층은?", a: ["기권", "외권", "수권", "지권"], c: 0 },
-        { q: "지구에 살고 있는 모든 생명체를 포함하는 영역은?", a: ["생물권", "지권", "수권", "기권"], c: 0 },
-        { q: "기권 바깥의 우주 공간을 무엇이라고 하는가?", a: ["외권", "내권", "기권", "수권"], c: 0 },
-        { q: "구름은 물방울이지만 대기 공간에 분포하므로 어느 권역으로 분류하나?", a: ["기권", "수권", "지권", "생물권"], c: 0 },
-        { q: "구름의 생성은 어느 권역 간의 상호작용 결과인가?", a: ["기권과 수권", "지권과 수권", "외권과 생물권", "기권과 외권"], c: 0 },
-        { q: "지구 내부 조사 방법 중 지진파 분석은 어느 방법에 속하는가?", a: ["간접적인 방법", "직접적인 방법", "시추법", "화산 분출물 조사"], c: 0 },
-        { q: "지구 내부 조사 방법 중 땅을 직접 파서 조사하는 방법은?", a: ["시추법", "지진파 분석", "화산 분출물 조사", "운석 조사"], c: 0 },
-        { q: "지구 내부 구조 중 가장 겉부분이며 두께가 가장 얇은 층은?", a: ["지각", "맨틀", "외핵", "내핵"], c: 0 },
-        { q: "대륙 지각과 해양 지각 중 두께가 더 두꺼운 것은?", a: ["대륙 지각", "해양 지각", "둘 다 같다", "알 수 없다"], c: 0 },
-        { q: "지각 아래에서 지구 전체 부피의 약 80%를 차지하는 층은?", a: ["맨틀", "외핵", "내핵", "지각"], c: 0 },
-        { q: "지구 내부 층 중 액체 상태로 추정되는 곳은?", a: ["외핵", "내핵", "맨틀", "지각"], c: 0 },
-        { q: "지구 내부 층 중 가장 깊은 곳에 있는 고체 상태의 층은?", a: ["내핵", "외핵", "맨틀", "지각"], c: 0 },
-        { q: "지구 내부 구조를 양파에 비유할 때 껍질에 해당하는 부분은?", a: ["지각", "맨틀", "외핵", "내핵"], c: 0 },
-        { q: "마그마나 용암이 굳어져 만들어진 암석은?", a: ["화성암", "퇴적암", "변성암", "편마암"], c: 0 },
-        { q: "지표 부근에서 용암이 빨리 식어 결정의 크기가 작은 화성암은?", a: ["화산암", "심성암", "퇴적암", "변성암"], c: 0 },
-        { q: "지하 깊은 곳에서 마그마가 천천히 식어 결정의 크기가 큰 화성암은?", a: ["심성암", "화산암", "퇴적암", "변성암"], c: 0 },
-        { q: "화성암 중 현무암은 어느 분류에 속하는가?", a: ["화산암", "심성암", "퇴적암", "변성암"], c: 0 },
-        { q: "화성암 중 화강암은 어느 분류에 속하는가?", a: ["심성암", "화산암", "퇴적암", "변성암"], c: 0 },
-        { q: "현무암의 색깔은 대체로 어떠한가?", a: ["어둡다", "밝다", "투명하다", "붉다"], c: 0 },
-        { q: "화강암의 색깔은 대체로 어떠한가?", a: ["밝다", "어둡다", "투명하다", "검다"], c: 0 },
-        { q: "화산 가스가 빠져나간 구멍이 많이 보이는 암석은?", a: ["현무암", "화강암", "역암", "대리암"], c: 0 },
-        { q: "퇴적물이 쌓인 후 다져지고 굳어져 만들어진 암석은?", a: ["퇴적암", "화성암", "변성암", "화산암"], c: 0 },
-        { q: "퇴적암에서 나타나는 평행한 줄무늬를 무엇이라 하는가?", a: ["층리", "엽리", "단층", "절리"], c: 0 },
-        { q: "퇴적암에서 과거 생물의 유해나 흔적이 남은 것을 무엇이라 하나?", a: ["화석", "엽리", "결정", "마그마"], c: 0 },
-        { q: "자갈, 모래, 진흙이 섞여 만들어진 퇴적암 중 알갱이가 가장 큰 것은?", a: ["역암", "사암", "셰일", "석회암"], c: 0 },
-        { q: "주로 모래가 쌓여 만들어진 퇴적암은?", a: ["사암", "역암", "셰일", "석회암"], c: 0 },
-        { q: "주로 진흙이 쌓여 만들어진 퇴적암은?", a: ["셰일", "사암", "역암", "응회암"], c: 0 },
-        { q: "묽은 염산을 떨어뜨리면 거품이 발생하는 퇴적암은?", a: ["석회암", "사암", "셰일", "현무암"], c: 0 },
-        { q: "석회암의 염산 반응 시 발생하는 기체는?", a: ["이산화 탄소", "산소", "수소", "질소"], c: 0 },
-        { q: "암석이 높은 열과 압력을 받아 성질이 변한 암석은?", a: ["변성암", "퇴적암", "화성암", "심성암"], c: 0 },
-        { q: "변성암에서 압력의 수직 방향으로 광물이 나열되어 생긴 줄무늬는?", a: ["엽리", "층리", "단층", "습곡"], c: 0 },
-        { q: "석회암이 변성 작용을 받아 만들어진 암석은?", a: ["대리암", "편마암", "규암", "화강암"], c: 0 },
-        { q: "사암이 변성 작용을 받아 만들어진 암석은?", a: ["규암", "대리암", "편마암", "역암"], c: 0 },
-        { q: "셰일이 변성 작용을 받아 줄무늬가 굵고 결정이 커진 암석은?", a: ["편마암", "대리암", "규암", "화산암"], c: 0 },
-        { q: "대리암에 묽은 염산을 떨어뜨리면 거품이 발생하는가?", a: ["네, 발생한다", "아니요, 안 난다", "색만 변한다", "녹아버린다"], c: 0 },
-        { q: "대리암의 변성 작용 시 화학 성분이 완전히 바뀌는가?", a: ["아니요, 배열과 크기만 바뀐다", "네, 완전히 바뀐다", "액체로 녹는다", "알 수 없다"], c: 0 },
-        { q: "변성암의 엽리는 압력의 어느 방향으로 생기는가?", a: ["수직 방향", "수평 방향", "같은 방향", "랜덤 방향"], c: 0 },
-        { q: "암석이 끊임없이 다른 암석으로 변하는 과정을 무엇이라 하나?", a: ["암석의 순환", "풍화 작용", "지각 변동", "화산 활동"], c: 0 },
-        { q: "암석이 마그마로 변하려면 어떤 과정이 필요한가?", a: ["녹음(용융)", "풍화", "냉각", "다져짐"], c: 0 },
-        { q: "퇴적물이 퇴적암이 되는 과정은?", a: ["다져지고 굳어짐", "높은 열과 압력", "냉각", "녹음"], c: 0 },
-        { q: "암석이 물과 공기에 의해 잘게 부서지거나 성분이 변하는 현상은?", a: ["풍화", "침식", "운반", "퇴적"], c: 0 },
-        { q: "식물 뿌리가 암석 틈을 파고들어 암석을 부수는 것은?", a: ["풍화 작용", "침식 작용", "광합성", "증산 작용"], c: 0 },
-        { q: "토양의 단면 중 유기물이 많아 식물이 자라기에 가장 적합한 층은?", a: ["표토", "심토", "모질물", "기반암"], c: 0 },
-        { q: "표토에서 녹아내린 물질이 쌓여 만들어진 토양 층은?", a: ["심토", "표토", "모질물", "기반암"], c: 0 },
-        { q: "토양의 생성 순서 중 가장 먼저 존재하는 층은?", a: ["기반암", "모질물", "표토", "심토"], c: 0 }
+        { q: "구름은 액체 상태의 물 입자이지만 어느 권역으로 분류하나?", a: ["기권", "수권", "지권", "외권"], c: 0 },
+        { q: "구름의 생성은 기권과 어느 권역의 상호작용 결과인가?", a: ["수권", "지권", "생물권", "외권"], c: 0 },
+        { q: "지구의 자기장이 태양풍을 막아 생물권을 보호하는 것은 지권과 어디의 상호작용?", a: ["외권", "기권", "수권", "우주권"], c: 0 },
+        { q: "지구 내부 조사 방법 중 직접 파서 내려가는 방법은?", a: ["시추", "지진파 연구", "중력 측정", "운석 조사"], c: 0 },
+        { q: "지구 내부 구조 중 가장 큰 부피(80%)를 차지하는 층은?", a: ["맨틀", "지각", "외핵", "내핵"], c: 0 },
+        { q: "지구 내부 층 중 액체 상태인 유일한 층은?", a: ["외핵", "내핵", "맨틀", "지각"], c: 0 },
+        { q: "내핵은 외핵과 성분이 비슷하지만 왜 고체 상태인가?", a: ["압력이 높아서", "온도가 낮아서", "밀도가 작아서", "액체가 굳어서"], c: 0 },
+        { q: "해양 지각의 평균 두께는 약 몇 km인가?", a: ["5km", "35km", "100km", "2900km"], c: 0 },
+        { q: "대륙 지각을 구성하는 주요 암석은?", a: ["화강암질 암석", "현무암질 암석", "이암", "석회암"], c: 0 },
+        { q: "해양 지각을 구성하는 주요 암석은?", a: ["현무암질 암석", "화강암질 암석", "대리암", "규암"], c: 0 },
+        { q: "암석을 구성하는 주된 광물을 무엇이라 하나?", a: ["조암 광물", "금속 광물", "희토류", "보석"], c: 0 },
+        { q: "조암 광물 중 가장 밝은 색을 띠는 것은?", a: ["장석, 석영", "감람석, 휘석", "흑운모", "각섬석"], c: 0 },
+        { q: "흑운모의 겉보기 색과 조흔색은?", a: ["검은색 / 흰색", "검은색 / 검은색", "녹색 / 흰색", "갈색 / 황색"], c: 0 },
+        { q: "자철석의 겉보기 색과 조흔색은?", a: ["검은색 / 검은색", "검은색 / 흰색", "갈색 / 붉은색", "노란색 / 검은색"], c: 0 },
+        { q: "적철석을 조흔판에 긁었을 때 나타나는 색(조흔색)은?", a: ["적갈색", "검은색", "흰색", "황금색"], c: 0 },
+        { q: "광물의 무르고 단단한 정도를 무엇이라 하는가?", a: ["굳기", "강도", "자성", "밀도"], c: 0 },
+        { q: "방해석과 석영 중 굳기가 더 단단한 광물은?", a: ["석영", "방해석", "동일하다", "알 수 없다"], c: 0 },
+        { q: "방해석에 묽은 염산을 떨어뜨리면 어떤 기체가 발생하나?", a: ["이산화 탄소", "산소", "질소", "수소"], c: 0 },
+        { q: "쇠붙이를 끌어당기는 자성을 가진 광물은?", a: ["자철석", "방해석", "석영", "장석"], c: 0 },
+        { q: "지하 깊은 곳에서 마그마가 천천히 식어 결정이 크게 자란 암석은?", a: ["심성암", "화산암", "퇴적암", "변성암"], c: 0 },
+        { q: "지표로 분출된 마그마가 급격히 식어 결정이 작은 암석은?", a: ["화산암", "심성암", "이암", "편마암"], c: 0 },
+        { q: "현무암과 반려암 중 색깔이 더 밝은 것은?", a: ["둘 다 어둡다", "현무암", "반려암", "둘 다 밝다"], c: 0 },
+        { q: "화강암과 유문암 중 마그마의 냉각 속도가 더 느린 것은?", a: ["화강암", "유문암", "동일하다", "알 수 없다"], c: 0 },
+        { q: "반려암은 지하 깊은 곳에서 식었는가 지표에서 식었는가?", a: ["지하 깊은 곳", "지표면", "바닷속", "공중"], c: 0 },
+        { q: "유문암은 결정의 크기가 큰가 작은가?", a: ["작다", "크다", "중간이다", "없다"], c: 0 },
+        { q: "퇴적물이 다져지고 굳어지는 작용을 무엇이라 하나?", a: ["속성 작용", "변성 작용", "냉각 작용", "풍화 작용"], c: 0 },
+        { q: "퇴적암에서 나타나는 나란한 줄무늬는?", a: ["층리", "엽리", "단층", "절리"], c: 0 },
+        { q: "화석은 어떤 종류의 암석에서만 발견되나?", a: ["퇴적암", "화성암", "변성암", "심성암"], c: 0 },
+        { q: "자갈, 모래, 진흙이 섞여 만들어진 퇴적암은?", a: ["역암", "사암", "이암", "석회암"], c: 0 },
+        { q: "주로 진흙으로만 이루어진 입자가 매우 작은 퇴적암은?", a: ["이암", "사암", "역암", "석회암"], c: 0 },
+        { q: "주로 모래가 쌓여 만들어진 퇴적암은?", a: ["사암", "이암", "역암", "석회암"], c: 0 },
+        { q: "석회암에 묽은 염산을 떨어뜨리면 거품이 나는 이유는 무엇 때문인가?", a: ["탄산 칼슘 성분", "규소 성분", "산소 성분", "철 성분"], c: 0 },
+        { q: "암석이 열과 압력을 받아 성질이 변하는 현상은?", a: ["변성 작용", "속성 작용", "풍화 작용", "냉각 작용"], c: 0 },
+        { q: "변성암에서 압력의 수직 방향으로 광물이 배열되며 생긴 줄무늬는?", a: ["엽리", "층리", "단층", "습곡"], c: 0 },
+        { q: "석회암이 변성되어 만들어진 암석은?", a: ["대리암", "규암", "편마암", "이암"], c: 0 },
+        { q: "사암이 변성되어 만들어진 암석은?", a: ["규암", "대리암", "편마암", "이암"], c: 0 },
+        { q: "이암이나 화강암이 강한 변성 작용을 받아 생긴 암석은?", a: ["편마암", "대리암", "규암", "석회암"], c: 0 },
+        { q: "대리암에서도 묽은 염산 반응이 나타나는가?", a: ["네, 나타난다", "아니요", "색만 변한다", "녹아버린다"], c: 0 },
+        { q: "암석이 끊임없이 다른 암석으로 변하는 과정을 무엇이라 하나?", a: ["암석의 순환", "풍화", "침식", "운반"], c: 0 },
+        { q: "풍화 작용의 주된 에너지원은 무엇인가?", a: ["태양 에너지", "지구 내부 에너지", "핵 에너지", "전기 에너지"], c: 0 },
+        { q: "암석의 틈에 들어간 물이 얼어 암석이 부서지는 것은?", a: ["물리적 풍화", "화학적 풍화", "생물적 풍화", "열적 풍화"], c: 0 },
+        { q: "지하수에 의해 암석이 녹아 석회 동굴이 생기는 것은?", a: ["화학적 풍화", "물리적 풍화", "동결 작용", "압력 감소"], c: 0 },
+        { q: "토양의 생성 순서 중 가장 나중에 생기는 층은?", a: ["심토", "표토", "모질물", "기반암"], c: 0 },
+        { q: "토양의 생성 순서로 옳은 것은?", a: ["기반암-모질물-표토-심토", "표토-심토-모질물-기반암", "기반암-표토-심토-모질물", "심토-표토-기반암-모질물"], c: 0 },
+        { q: "풍화되지 않은 단단한 암석 층은?", a: ["기반암", "모질물", "표토", "심토"], c: 0 },
+        { q: "유기물이 많아 생물 활동이 활발한 토양 층은?", a: ["표토", "심토", "모질물", "기반암"], c: 0 },
+        { q: "마그마가 지하 깊은 곳에서 식으면 결정의 크기가 어떠한가?", a: ["크다", "작다", "없다", "일정하다"], c: 0 },
+        { q: "암석이 마그마로 변하려면 어떤 과정이 필요한가?", a: ["녹음(용융)", "다져짐", "변성", "풍화"], c: 0 },
+        { q: "적철석의 조흔색은 무슨 색인가?", a: ["적갈색", "검은색", "흰색", "노란색"], c: 0 }
     ];
 
     const abilities = [
@@ -243,7 +266,8 @@
 
     let state = {
         active: false, paused: false, stage: 1, lv: 1, exp: 0, maxExp: 100,
-        timer: 30, frameCount: 0, bossStage1: 10, bossStage2: 20, isClearTransition: false
+        timer: 30, frameCount: 0, bossStage1: 10, bossStage2: 20, isClearTransition: false,
+        pendingRetry: false
     };
 
     const player = {
@@ -254,11 +278,16 @@
     };
 
     let enemies = []; let bullets = []; let enemyBullets = []; let boss = null;
-    let magicZones = []; 
-    let quizPool = [];
+    let magicZones = []; let quizPool = [];
     const input = { x: 0, y: 0, active: false }; const keys = {};
 
-    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keydown', e => {
+        keys[e.code] = true;
+        // 개발자 모드 단축키 (백틱 `)
+        if (e.code === 'Backquote') {
+            openDevMenu();
+        }
+    });
     window.addEventListener('keyup', e => keys[e.code] = false);
 
     const jStick = document.getElementById('joystick-stick');
@@ -277,34 +306,99 @@
         jContainer.addEventListener('touchend', () => { input.active = false; input.x = 0; input.y = 0; jStick.style.transform = `translate(0, 0)`; });
     }
 
-    function startGame() {
+    // 개발자 모드 메뉴 열기/닫기
+    function openDevMenu() {
+        state.paused = true;
+        document.getElementById('dev-screen').style.display = 'flex';
+    }
+
+    function closeDevMenu() {
+        document.getElementById('dev-screen').style.display = 'none';
+        state.paused = false;
+    }
+
+    // 모든 퀴즈의 정답 위치를 무작위로 섞는 함수
+    function shuffleQuizAnswers() {
+        quizBank.forEach(quiz => {
+            const correctText = quiz.a[quiz.c];
+            // Fisher-Yates Shuffle
+            for (let i = quiz.a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [quiz.a[i], quiz.a[j]] = [quiz.a[j], quiz.a[i]];
+            }
+            quiz.c = quiz.a.indexOf(correctText); // 섞인 후 정답 인덱스 재업데이트
+        });
+    }
+
+    // 게임 시작 함수 (개발자 모드 파라미터 지원)
+    function startGame(startStage = 1, startLv = 1) {
         document.getElementById('start-screen').style.display = 'none';
         document.getElementById('fail-screen').style.display = 'none';
-        state.active = true; state.stage = 1; state.timer = 30; state.lv = 1; state.exp = 0; state.maxExp = 100;
-        player.hp = 100; player.maxHp = 100; player.dmg = 25; player.attackSpeed = 35; player.burstCount = 1; player.spreadCount = 1;
+        document.getElementById('dev-screen').style.display = 'none';
+        shuffleQuizAnswers(); // 시작 시 퀴즈 정답 위치 섞기
+        
+        state.active = true; 
+        state.paused = false;
+        state.stage = startStage; 
+        state.timer = 30; 
+        state.lv = startLv; 
+        state.exp = 0; 
+        state.maxExp = 150 + (state.lv * 100);
+        
+        // 개발자 모드 진입 등 레벨 점프 시 자동 보정 로직
+        player.maxHp = 100 + ((startLv - 1) * 50);
+        player.hp = player.maxHp;
+        player.dmg = 25 + ((startLv - 1) * 20);
+        player.attackSpeed = Math.max(6, 35 - Math.floor((startLv - 1) / 2) * 5);
+        player.burstCount = 1 + Math.floor((startLv - 1) / 4);
+        player.spreadCount = 1 + Math.floor((startLv - 1) / 4);
+        
         player.invincibleTimer = 0;
         enemies = []; bullets = []; enemyBullets = []; boss = null; magicZones = [];
         quizPool = quizBank.map((_, i) => i);
-        updateUI(); animate();
+        
+        if (state.stage === state.bossStage1 || state.stage === state.bossStage2) {
+            spawnBoss();
+        } else {
+            document.getElementById('boss-ui').style.display = 'none';
+            document.getElementById('timer-display').style.display = 'block';
+        }
+
+        updateUI(); 
+        animate();
+    }
+
+    // 개발자 모드에서 시작 버튼 클릭 시
+    function startDevGame() {
+        state.active = false; // 진행 중이던 기존 루프 확실히 정지
+        setTimeout(() => {
+            const st = parseInt(document.getElementById('dev-stage').value) || 1;
+            const lv = parseInt(document.getElementById('dev-lv').value) || 1;
+            startGame(st, lv);
+        }, 50); // 콜스택 클리어를 위한 딜레이
+    }
+
+    function startRetryQuiz() {
+        document.getElementById('fail-screen').style.display = 'none';
+        state.pendingRetry = true;
+        openQuiz(true, "부활 퀴즈 (정답 시 보스전 재개)");
     }
 
     function retryBoss() {
-        document.getElementById('fail-screen').style.display = 'none';
         state.active = true;
-        state.timer = 30; // 보스전은 타이머 무의미하지만 초기화
+        state.paused = false;
+        state.timer = 30;
         player.hp = player.maxHp;
         enemies = []; bullets = []; enemyBullets = []; magicZones = [];
         spawnBoss();
         updateUI();
-        // 애니메이션 루프는 이미 실행 중이거나 재실행 필요 없음 (state.active가 트리거)
+        requestAnimationFrame(animate); // 루프 재시동 보장
     }
 
     function spawnEnemy() {
         if (state.stage === state.bossStage1 || state.stage === state.bossStage2 || state.isClearTransition) return;
-        
         const maxEnemies = 12 + (state.stage * 3);
         if (enemies.length >= maxEnemies) return;
-
         const edge = Math.floor(Math.random() * 4); let x, y;
         if (edge === 0) { x = Math.random() * canvas.width; y = -50; }
         else if (edge === 1) { x = canvas.width + 50; y = Math.random() * canvas.height; }
@@ -313,8 +407,8 @@
 
         let type = 'normal';
         const rand = Math.random();
-        if (state.stage >= 16 && rand > 0.85) type = 'shield'; // 16스테이지 방패병
-        else if (state.stage >= 11 && rand > 0.7) type = 'mage'; // 11스테이지 마법사
+        if (state.stage >= 16 && rand > 0.85) type = 'shield';
+        else if (state.stage >= 11 && rand > 0.7) type = 'mage';
         else if (state.stage >= 5 && rand > 0.75) type = 'shooter';
         else if (state.stage >= 2 && rand > 0.85) type = 'fast';
 
@@ -323,22 +417,22 @@
 
         enemies.push({
             x, y, 
-            hp: type === 'shield' ? baseHp * 5 : (type === 'fast' ? baseHp * 0.5 : (type === 'shooter' ? baseHp * 0.45 : baseHp)), 
-            maxHp: type === 'shield' ? baseHp * 5 : (type === 'fast' ? baseHp * 0.5 : (type === 'shooter' ? baseHp * 0.45 : baseHp)),
+            hp: type === 'shield' ? baseHp * 5 : (type === 'fast' ? baseHp * 0.5 : (type === 'shooter' ? baseHp * 0.85 : baseHp)), 
+            maxHp: type === 'shield' ? baseHp * 5 : (type === 'fast' ? baseHp * 0.5 : (type === 'shooter' ? baseHp * 0.85 : baseHp)),
             radius: type === 'shield' ? 32 : (type === 'shooter' ? 26 : (type === 'fast' ? 16 : 22)),
             speed: type === 'shield' ? baseSpeed * 0.4 : (type === 'fast' ? baseSpeed * 1.6 : (type === 'shooter' ? baseSpeed * 0.7 : baseSpeed)),
-            color: type === 'shield' ? '#7f8c8d' : (type === 'mage' ? '#9b59b6' : (type === 'fast' ? '#e67e22' : '#c0392b')),
-            type, blink: 0, shootCooldown: Math.random() * 60, chargeTimer: 0
+            color: type === 'shield' ? '#7f8c8d' : (type === 'mage' ? '#2980b9' : (type === 'shooter' ? '#9b59b6' : (type === 'fast' ? '#e67e22' : '#c0392b'))),
+            type, blink: 0, shootCooldown: Math.random() * 60
         });
     }
 
     function spawnBoss() {
         if (state.stage === state.bossStage1) {
-            const bossHp = 150000 + (state.lv * 20000);
+            const bossHp = 75000 + (state.lv * 10000);
             boss = { x: canvas.width / 2, y: -100, targetY: 150, radius: 75, hp: bossHp, maxHp: bossHp, color: '#ff4757', attackCooldown: 0, blink: 0, moveDir: 1, moveTimer: 0, pattern: 0 };
             document.getElementById('boss-name').innerText = "지구의 핵 - 진동하는 파괴자";
         } else if (state.stage === state.bossStage2) {
-            const bossHp = 500000 + (state.lv * 50000); // 20스테이지 최종보스 체력 대폭 상향
+            const bossHp = 575000 + (state.lv * 60000);
             boss = { x: canvas.width / 2, y: -100, targetY: 150, radius: 90, hp: bossHp, maxHp: bossHp, color: '#2c3e50', attackCooldown: 0, blink: 0, moveDir: 1, moveTimer: 0, pattern: 0 };
             document.getElementById('boss-name').innerText = "지구의 심장 - 최종 심판자";
         }
@@ -362,7 +456,8 @@
 
     function proceedAfterQuiz() {
         state.isClearTransition = false;
-        state.stage++; state.timer = 30;
+        state.stage++; 
+        state.timer = 30; // 다음 스테이지도 타이머 30초 복구
         if (state.stage === state.bossStage1 || state.stage === state.bossStage2) spawnBoss();
         else {
             document.getElementById('boss-ui').style.display = 'none';
@@ -390,29 +485,15 @@
         ctx.save(); ctx.translate(en.x, en.y);
         ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, en.radius + 5, en.radius * 0.8, 5, 0, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = en.blink > 0 ? '#fff' : en.color; 
-        
-        if (en.type === 'fast') { 
-            ctx.beginPath(); ctx.moveTo(0, -en.radius); ctx.lineTo(en.radius, en.radius); ctx.lineTo(-en.radius, en.radius); ctx.fill();
-        } else if (en.type === 'shooter' || en.type === 'mage') {
-            ctx.beginPath(); 
-            for(let i=0; i<6; i++) { const ang = (Math.PI*2/6)*i; ctx.lineTo(Math.cos(ang)*en.radius, Math.sin(ang)*en.radius); }
-            ctx.fill();
-            if (en.type === 'mage') { // 마법사 모자
-                ctx.fillStyle = '#2c3e50';
-                ctx.beginPath(); ctx.moveTo(-en.radius, -en.radius/2); ctx.lineTo(0, -en.radius*1.8); ctx.lineTo(en.radius, -en.radius/2); ctx.fill();
-            }
-        } else if (en.type === 'shield') {
-            ctx.fillRect(-en.radius, -en.radius, en.radius*2, en.radius*2);
-            ctx.fillStyle = '#34495e';
-            ctx.fillRect(-en.radius + 5, -en.radius + 5, 10, en.radius*2 - 10); // 방패 느낌
-        } else {
-            ctx.beginPath(); ctx.arc(0, 0, en.radius, 0, Math.PI*2); ctx.fill();
-        }
-
+        if (en.type === 'fast') { ctx.beginPath(); ctx.moveTo(0, -en.radius); ctx.lineTo(en.radius, en.radius); ctx.lineTo(-en.radius, en.radius); ctx.fill(); } 
+        else if (en.type === 'shooter' || en.type === 'mage') {
+            ctx.beginPath(); for(let i=0; i<6; i++) { const ang = (Math.PI*2/6)*i; ctx.lineTo(Math.cos(ang)*en.radius, Math.sin(ang)*en.radius); } ctx.fill();
+            if (en.type === 'mage') { ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.moveTo(-en.radius, -en.radius/2); ctx.lineTo(0, -en.radius*1.8); ctx.lineTo(en.radius, -en.radius/2); ctx.fill(); }
+        } else if (en.type === 'shield') { ctx.fillRect(-en.radius, -en.radius, en.radius*2, en.radius*2); ctx.fillStyle = '#34495e'; ctx.fillRect(-en.radius + 5, -en.radius + 5, 10, en.radius*2 - 10); } 
+        else { ctx.beginPath(); ctx.arc(0, 0, en.radius, 0, Math.PI*2); ctx.fill(); }
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-6, -4, 4, 0, Math.PI*2); ctx.arc(6, -4, 4, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-6, -4, 2, 0, Math.PI*2); ctx.arc(6, -4, 2, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath();
-        ctx.moveTo(-10, -10); ctx.lineTo(-2, -6); ctx.moveTo(10, -10); ctx.lineTo(2, -6); ctx.stroke();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-10, -10); ctx.lineTo(-2, -6); ctx.moveTo(10, -10); ctx.lineTo(2, -6); ctx.stroke();
         ctx.restore(); if (en.blink > 0) en.blink--;
     }
 
@@ -426,26 +507,38 @@
         ctx.restore(); if (boss.blink > 0) boss.blink--;
     }
 
-    function openQuiz(isLevelUp = true) {
+    function openQuiz(isLevelUp = true, customTitle = null) {
         state.paused = true; input.active = false;
         if (quizPool.length === 0) quizPool = quizBank.map((_, i) => i);
         const poolIndex = Math.floor(Math.random() * quizPool.length);
         const quizIndex = quizPool.splice(poolIndex, 1)[0];
         const quiz = quizBank[quizIndex];
-        document.getElementById('modal-title').innerText = isLevelUp ? "레벨업! 지식 강화" : `스테이지 ${state.stage} 클리어 퀴즈`;
+
+        document.getElementById('modal-title').innerText = customTitle || (isLevelUp ? "레벨업! 지식 강화" : `스테이지 ${state.stage} 클리어 퀴즈`);
         document.getElementById('modal-desc').innerText = quiz.q;
         const opts = document.getElementById('modal-options'); opts.innerHTML = '';
         quiz.a.forEach((txt, i) => {
             const btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = txt;
-            btn.onclick = () => { if (i === quiz.c) openAbilitySelection(isLevelUp); else handlePenalty(isLevelUp); };
+            btn.onclick = () => { handleQuizResult(i === quiz.c, isLevelUp); };
             opts.appendChild(btn);
         });
         modal.style.display = 'block';
     }
 
+    function handleQuizResult(correct, isLevelUp) {
+        modal.style.display = 'none';
+        if (state.pendingRetry) {
+            state.pendingRetry = false;
+            if (correct) { retryBoss(); } 
+            else { alert("재도전 퀴즈 실패! 처음부터 다시 시작합니다."); location.reload(); }
+            return;
+        }
+        if (correct) openAbilitySelection(isLevelUp);
+        else handlePenalty(isLevelUp);
+    }
+
     function handlePenalty(isLevelUp) {
-        modal.style.display = 'none'; state.paused = false;
-        player.hp -= 25; player.invincibleTimer = 30;
+        state.paused = false; player.hp -= 25; player.invincibleTimer = 30;
         updateUI(); if (player.hp <= 0) endGame(); if (!isLevelUp) proceedAfterQuiz(); 
     }
 
@@ -466,6 +559,7 @@
             };
             opts.appendChild(btn);
         });
+        modal.style.display = 'block';
     }
 
     function updateUI() {
@@ -478,29 +572,18 @@
 
     function endGame(win = false) {
         state.active = false;
-        if (win) {
-            alert(`지구 수호 성공! 모든 위협으로부터 지구를 구했습니다! 최종 레벨: ${state.lv}`);
-            location.reload();
-        } else {
+        if (win) { alert("지구 정복 성공!"); location.reload(); } 
+        else {
             document.getElementById('fail-screen').style.display = 'flex';
             const retryBtn = document.getElementById('boss-retry-btn');
-            if (state.stage === state.bossStage1 || state.stage === state.bossStage2) {
-                retryBtn.style.display = 'block';
-                document.getElementById('fail-msg').innerText = `보스전에서 패배했습니다. 다시 도전하시겠습니까?`;
-            } else {
-                retryBtn.style.display = 'none';
-                document.getElementById('fail-msg').innerText = `스테이지 ${state.stage}에서 패배했습니다.`;
-            }
+            if (state.stage === state.bossStage1 || state.stage === state.bossStage2) retryBtn.style.display = 'block';
+            else retryBtn.style.display = 'none';
         }
     }
 
     function fireBullets() {
-        let target = null;
-        if (boss) target = boss;
-        else if (enemies.length > 0) {
-            let minDist = Infinity;
-            enemies.forEach(e => { const d = Math.sqrt((e.x-player.x)**2 + (e.y-player.y)**2); if (d < minDist) { minDist = d; target = e; } });
-        }
+        let target = boss || (enemies.length > 0 ? enemies.reduce((prev, curr) => 
+            Math.sqrt((curr.x-player.x)**2+(curr.y-player.y)**2) < Math.sqrt((prev.x-player.x)**2+(prev.y-player.y)**2) ? curr : prev) : null);
         if (!target) return;
         const baseAngle = Math.atan2(target.y - player.y, target.x - player.x);
         for (let b = 0; b < player.burstCount; b++) {
@@ -508,9 +591,9 @@
                 if (!state.active || state.paused) return;
                 for (let s = 0; s < player.spreadCount; s++) {
                     const offset = (s - (player.spreadCount - 1) / 2) * 0.22;
-                    bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle + offset) * 10, vy: Math.sin(baseAngle + offset) * 10, dmg: player.dmg });
+                    bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle + offset) * 11, vy: Math.sin(baseAngle + offset) * 11, dmg: player.dmg });
                 }
-            }, b * 120);
+            }, b * 110);
         }
     }
 
@@ -518,12 +601,16 @@
         if (!state.active) return;
         if (state.paused || state.isClearTransition) { requestAnimationFrame(animate); return; }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         if (player.invincibleTimer > 0) player.invincibleTimer--;
 
-        if (state.stage < state.bossStage2) { 
+        // 타이머 로직
+        const isBossLevel = (state.stage === state.bossStage1 || state.stage === state.bossStage2);
+        if (!isBossLevel && !state.isClearTransition) { 
             state.timer -= 1/60; 
-            if (state.timer <= 0 && state.stage !== state.bossStage1) showStageClear(); 
+            if (state.timer <= 0) { 
+                state.timer = 0;
+                showStageClear(); 
+            } 
         }
 
         let mx = 0, my = 0;
@@ -537,144 +624,88 @@
         } else { player.isMoving = false; }
         drawPlayer();
 
-        // 마법사 공격 영역 그리기
         magicZones.forEach((mz, idx) => {
-            ctx.beginPath();
-            ctx.arc(mz.x, mz.y, mz.radius, 0, Math.PI*2);
-            ctx.fillStyle = mz.timer > 20 ? `rgba(231, 76, 60, ${0.1 + (60-mz.timer)/60})` : 'rgba(231, 76, 60, 0.8)';
-            ctx.fill();
-            mz.timer--;
+            ctx.beginPath(); ctx.arc(mz.x, mz.y, mz.radius, 0, Math.PI*2);
+            ctx.fillStyle = mz.timer > 20 ? `rgba(231, 76, 60, ${0.1 + (60-mz.timer)/60})` : 'rgba(231, 76, 60, 0.7)';
+            ctx.fill(); mz.timer--;
             if (mz.timer === 0) {
-                const d = Math.sqrt((player.x-mz.x)**2 + (player.y-mz.y)**2);
-                if (d < player.radius + mz.radius && player.invincibleTimer <= 0) {
-                    player.hp -= 25; player.lastHitTime = Date.now();
-                    if (player.hp <= 0) endGame();
+                if (Math.sqrt((player.x-mz.x)**2 + (player.y-mz.y)**2) < player.radius + mz.radius && player.invincibleTimer <= 0) {
+                    player.hp -= 25; player.lastHitTime = Date.now(); if (player.hp <= 0) endGame();
                 }
                 magicZones.splice(idx, 1);
             }
         });
 
-        if (state.stage !== state.bossStage1 && state.stage !== state.bossStage2) {
+        if (!isBossLevel) {
             if (state.frameCount % (Math.max(10, 42 - state.stage * 2)) === 0) spawnEnemy();
             enemies.forEach((en, idx) => {
-                const dx = player.x - en.x; const dy = player.y - en.y; const dist = Math.sqrt(dx*dx + dy*dy);
-                
-                if (en.type === 'shooter' && dist < 220) { en.x -= (dx/dist) * en.speed; en.y -= (dy/dist) * en.speed; } 
-                else if (en.type === 'mage' && dist < 250) { en.x -= (dx/dist) * en.speed; en.y -= (dy/dist) * en.speed; }
-                else { en.x += (dx/dist) * en.speed; en.y += (dy/dist) * en.speed; }
-                
+                const dx = player.x - en.x, dy = player.y - en.y, dist = Math.sqrt(dx*dx + dy*dy);
+                en.x += (dx/dist) * en.speed; en.y += (dy/dist) * en.speed;
                 drawEnemy(en);
-
-                if (en.type === 'shooter') {
+                if (en.type === 'shooter' || en.type === 'mage') {
                     en.shootCooldown++;
-                    if (en.shootCooldown > Math.max(50, 140 - state.stage * 10)) {
-                        const ang = Math.atan2(dy, dx);
-                        enemyBullets.push({ x: en.x, y: en.y, vx: Math.cos(ang)*5.5, vy: Math.sin(ang)*5.5, radius: 7, bounces: 0 });
-                        en.shootCooldown = 0;
-                    }
-                } else if (en.type === 'mage') {
-                    en.shootCooldown++;
-                    if (en.shootCooldown > 120) {
-                        magicZones.push({ x: player.x, y: player.y, radius: 80, timer: 60 });
+                    if (en.shootCooldown > (en.type === 'mage' ? 130 : 90)) {
+                        if (en.type === 'mage') magicZones.push({ x: player.x, y: player.y, radius: 85, timer: 65 });
+                        else enemyBullets.push({ x: en.x, y: en.y, vx: (dx/dist)*6, vy: (dy/dist)*6, radius: 7, bounces: 0 });
                         en.shootCooldown = 0;
                     }
                 }
-
                 if (dist < player.radius + en.radius && player.invincibleTimer <= 0) {
-                    player.hp -= (en.type === 'shield' ? 2.0 : 1.0); 
-                    player.lastHitTime = Date.now();
-                    if (player.hp <= 0) endGame();
+                    player.hp -= (en.type === 'shield' ? 2.0 : 1.0); player.lastHitTime = Date.now(); if (player.hp <= 0) endGame();
                 }
             });
         } else if (boss) {
             if (boss.y < boss.targetY) boss.y += 2;
             else {
-                boss.moveTimer += 0.02;
-                boss.x = canvas.width / 2 + Math.sin(boss.moveTimer) * (canvas.width * 0.3);
+                boss.moveTimer += 0.02; boss.x = canvas.width / 2 + Math.sin(boss.moveTimer) * (canvas.width * 0.35);
                 boss.attackCooldown++;
-
-                if (boss.attackCooldown % (state.stage === 20 ? 120 : 180) === 0) { boss.pattern = Math.floor(Math.random() * (state.stage === 20 ? 4 : 3)); }
-
-                if (boss.attackCooldown % (state.stage === 20 ? 30 : 40) === 0) {
-                    if (boss.pattern === 0) { // 원형 발사
-                        const count = state.stage === 20 ? 24 : 18;
-                        for(let i=0; i<count; i++) {
-                            const ang = (Math.PI*2/count)*i + (state.frameCount*0.05);
-                            enemyBullets.push({ x: boss.x, y: boss.y, vx: Math.cos(ang)*7, vy: Math.sin(ang)*7, radius: 9, bounces: 0 });
-                        }
-                    } else if (boss.pattern === 1) { // 튕기는 탄환
-                        const count = state.stage === 20 ? 12 : 8;
-                        for(let i=0; i<count; i++) {
-                            const ang = (Math.PI*2/count)*i;
-                            enemyBullets.push({ x: boss.x, y: boss.y, vx: Math.cos(ang)*6, vy: Math.sin(ang)*6, radius: 10, bounces: (state.stage === 20 ? 4 : 2) });
-                        }
-                    } else if (boss.pattern === 2) { // 조준 점사
-                        const ang = Math.atan2(player.y-boss.y, player.x-boss.x);
-                        const count = state.stage === 20 ? 5 : 3;
-                        for(let i=0; i<count; i++) {
-                            setTimeout(() => { if(boss) enemyBullets.push({ x: boss.x, y: boss.y, vx: Math.cos(ang)*10, vy: Math.sin(ang)*10, radius: 12, bounces: 0 }); }, i * 120);
-                        }
-                    } else if (boss.pattern === 3) { // 20스테이지 전용: 나선형 마법 폭발
-                        magicZones.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, radius: 100, timer: 45 });
-                        const ang = Math.atan2(player.y-boss.y, player.x-boss.x);
-                        enemyBullets.push({ x: boss.x, y: boss.y, vx: Math.cos(ang)*12, vy: Math.sin(ang)*12, radius: 15, bounces: 1 });
+                if (boss.attackCooldown % (state.stage === 20 ? 100 : 150) === 0) boss.pattern = Math.floor(Math.random() * (state.stage === 20 ? 4 : 3));
+                if (boss.attackCooldown % (state.stage === 20 ? 25 : 40) === 0) {
+                    if (boss.pattern === 0) {
+                        for(let i=0; i<20; i++) { const ang = (Math.PI*2/20)*i; enemyBullets.push({ x: boss.x, y: boss.y, vx: Math.cos(ang)*6, vy: Math.sin(ang)*6, radius: 10, bounces: 0 }); }
+                    } else if (boss.pattern === 1) {
+                        for(let i=0; i<6; i++) { const ang = (Math.PI*2/6)*i; enemyBullets.push({ x: boss.x, y: boss.y, vx: Math.cos(ang)*5, vy: Math.sin(ang)*5, radius: 11, bounces: 3 }); }
+                    } else if (boss.pattern === 2) {
+                        const ang = Math.atan2(player.y-boss.y, player.x-boss.x); enemyBullets.push({ x: boss.x, y: boss.y, vx: Math.cos(ang)*11, vy: Math.sin(ang)*11, radius: 13, bounces: 0 });
+                    } else if (boss.pattern === 3) {
+                        magicZones.push({ x: player.x, y: player.y, radius: 120, timer: 50 });
                     }
                 }
             }
             drawBoss();
         }
 
-        // 적 탄환 업데이트
         for (let i = enemyBullets.length - 1; i >= 0; i--) {
-            const eb = enemyBullets[i];
-            eb.x += eb.vx; eb.y += eb.vy;
-
+            const eb = enemyBullets[i]; eb.x += eb.vx; eb.y += eb.vy;
             if (eb.bounces > 0) {
                 if (eb.x < 0 || eb.x > canvas.width) { eb.vx *= -1; eb.bounces--; }
                 if (eb.y < 0 || eb.y > canvas.height) { eb.vy *= -1; eb.bounces--; }
             }
-
-            ctx.fillStyle = eb.bounces > 0 ? '#ffeb3b' : '#ff4757';
-            ctx.beginPath(); ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI*2); ctx.fill();
-            if (eb.bounces > 0) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
-
-            const d = Math.sqrt((eb.x-player.x)**2 + (eb.y-player.y)**2);
-            if (d < player.radius + eb.radius) {
-                if (player.invincibleTimer <= 0) {
-                    player.hp -= (eb.bounces > 0 ? 15 : 20); 
-                    player.lastHitTime = Date.now();
-                    enemyBullets.splice(i, 1);
-                    if (player.hp <= 0) endGame();
-                }
-                continue;
-            }
-            if (eb.x < -100 || eb.x > canvas.width+100 || eb.y < -100 || eb.y > canvas.height+100) enemyBullets.splice(i, 1);
+            ctx.fillStyle = eb.bounces > 0 ? '#ffeb3b' : '#ff4757'; ctx.beginPath(); ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI*2); ctx.fill();
+            if (Math.sqrt((eb.x-player.x)**2 + (eb.y-player.y)**2) < player.radius + eb.radius && player.invincibleTimer <= 0) {
+                player.hp -= 20; player.lastHitTime = Date.now(); enemyBullets.splice(i, 1); if (player.hp <= 0) endGame();
+            } else if (eb.x < -100 || eb.x > canvas.width+100 || eb.y < -100 || eb.y > canvas.height+100) enemyBullets.splice(i, 1);
         }
 
-        player.attackCooldown++;
-        if (player.attackCooldown >= player.attackSpeed) { fireBullets(); player.attackCooldown = 0; }
+        player.attackCooldown++; if (player.attackCooldown >= player.attackSpeed) { fireBullets(); player.attackCooldown = 0; }
 
         bullets.forEach((b, idx) => {
             b.x += b.vx; b.y += b.vy; ctx.fillStyle = '#3498db'; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, Math.PI*2); ctx.fill();
             if (boss && Math.sqrt((b.x-boss.x)**2 + (b.y-boss.y)**2) < boss.radius+6) {
                 boss.hp -= b.dmg; boss.blink = 3; bullets.splice(idx, 1);
-                if (boss.hp <= 0) {
-                    if (state.stage === state.bossStage2) endGame(true);
-                    else showStageClear();
-                }
+                if (boss.hp <= 0) { if (state.stage === state.bossStage2) endGame(true); else showStageClear(); }
             }
             enemies.forEach((en, eIdx) => {
                 if (Math.sqrt((b.x-en.x)**2 + (b.y-en.y)**2) < en.radius+6) {
                     en.hp -= b.dmg; en.blink = 3; bullets.splice(idx, 1);
                     if (en.hp <= 0) {
                         enemies.splice(eIdx, 1); state.exp += 35;
-                        if (state.exp >= state.maxExp) { state.lv++; state.exp = 0; state.maxExp = 150 + (state.lv * 100) + (Math.pow(state.lv, 1.8) * 20); openQuiz(true); }
+                        if (state.exp >= state.maxExp) { state.lv++; state.exp = 0; state.maxExp = 150 + (state.lv * 100); openQuiz(true); }
                     }
                 }
             });
             if (b.x < -20 || b.x > canvas.width+20 || b.y < -20 || b.y > canvas.height+20) bullets.splice(idx, 1);
         });
-
         state.frameCount++; updateUI(); requestAnimationFrame(animate);
     }
 </script>
